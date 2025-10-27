@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 # --- Configuration ---
 MODEL_NAME = "Hunyuan-MT-7B"
-SOURCE_FILE_PATH = "test.zh"
-OUTPUT_FILE_PATH = "test.en"
-BATCH_SIZE = 1 # Adjust based on your GPU memory. Lower if you get OutOfMemory errors.
+SOURCE_FILE_PATH = "wmttest2022.zh"
+OUTPUT_FILE_PATH = "wmttest2022nonewlines.en"
+BATCH_SIZE = 2 # Adjust based on your GPU memory. Lower if you get OutOfMemory errors.
 
 # --- 1. Load Model and Tokenizer ---
 print("Loading model and tokenizer...")
@@ -88,8 +88,11 @@ for batch_sentences in tqdm(batches, desc="Translating Batches"):
         translation_tokens = outputs[j][prompt_lengths[j]:]
         translation_text = tokenizer.decode(translation_tokens, skip_special_tokens=True)
         decoded_outputs.append(translation_text)
-
-    all_translations.extend(decoded_outputs)
+    cleaned_outputs = []
+    for text in decoded_outputs:
+        single_line = " ".join(text.split())
+        cleaned_outputs.append(single_line)
+    all_translations.extend(cleaned_outputs)
     
     # We no longer need the manual print statement here as tqdm handles it
     # print(f"  - Translated batch {i+1}/{len(batches)}")
@@ -101,6 +104,7 @@ print(f"Translation finished in {end_time - start_time:.2f} seconds.")
 print(f"Saving translations to {OUTPUT_FILE_PATH}...")
 with open(OUTPUT_FILE_PATH, 'w', encoding='utf-8') as f:
     for translation in all_translations:
-        f.write(translation.strip() + '\n')
+        f.write(translation + '\n')
 
 print("Done!")
+
