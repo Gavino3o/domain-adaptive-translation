@@ -5,7 +5,7 @@ model_path="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B"
 model_size="7B"
 tokenizer_path=${model_path}
 
-train_data_file=train_dataset_literary_final.jsonl
+train_data_file=train_dataset_literary_hy.jsonl
 
 ds_config_file=ds_zero3_offload_no_auto.json
 output_path=./hf_train_output
