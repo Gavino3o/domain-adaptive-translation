@@ -1,0 +1,18 @@
+﻿x_name:  social_base_mt_score.txt
+y_name:  social_ft_mt_score.txt
+
+
+Bootstrap Resampling Results:
+x-mean: 1.8206
+y-mean: 1.7863
+ties (%%):      1.1170
+x_wins (%%):    69.7766
+y_wins (%%):    29.1064
+
+
+Paired T-Test Results:
+statistic:      -18.1567
+p_value:        0.0000
+Null hypothesis rejected according to t-test (alpha=0.05).
+Scores differ significantly across samples.
+social_base_mt_score.txt outperforms social_ft_mt_score.txt.
