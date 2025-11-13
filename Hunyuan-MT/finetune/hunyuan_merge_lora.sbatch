@@ -12,5 +12,5 @@ cd ~
 source ~/venv/bin/activate
 
 cd ~/CS4248-MT-proj/Hunyuan-MT/finetune
-bash run_merge.sh
+bash merge_weights_hy.sh
 

@@ -17,7 +17,7 @@ source ~/venv/bin/activate
 
 # --- Model & File Definitions ---
 export BASE_MODEL="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B"
-export FINETUNED_MODEL_LIT="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B-Finetuned-Literature"
+export FINETUNED_MODEL_LIT="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B-Finetuned-Literary"
 export FINETUNED_MODEL_SPEECH="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B-Finetuned-Speech"
 export FINETUNED_MODEL_NEWS="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B-Finetuned-News"
 export FINETUNED_MODEL_SOCIAL="/home/e/e0985887/CS4248-MT-proj/Hunyuan-MT-7B-Finetuned-Social"

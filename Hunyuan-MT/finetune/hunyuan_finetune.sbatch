@@ -12,4 +12,4 @@ cd ~
 source ~/venv/bin/activate
 
 cd ~/CS4248-MT-proj/Hunyuan-MT/finetune
-bash finetune_cc.sh
+bash finetune_hy.sh
