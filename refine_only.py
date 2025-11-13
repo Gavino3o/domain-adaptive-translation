@@ -55,7 +55,6 @@ chimera_model = AutoModelForCausalLM.from_pretrained(
     CHIMERA_MODEL_NAME,
     torch_dtype=torch.float16,
     device_map="auto",
-    max_memory={0: "6GB", "cpu": "20GB"}
 )
 chimera_model.config.pad_token_id = chimera_tokenizer.pad_token_id
 chimera_model.eval()
