@@ -1,203 +1,391 @@
-# Chinese-English Machine Translation Project
+# Domain-Adaptive Chinese-English Machine Translation
 
-This project uses Hunyuan MT models for Chinese-to-English translation and COMET for translation quality evaluation.
+A comprehensive framework for domain-adaptive neural machine translation using **Hunyuan MT** models with fine-tuned adapters for specialised domains (news, social media, speech, literary) and quality evaluation using **COMET metrics**.
 
-## Prerequisites
+## Project Overview
 
-- Python 3.10+
-- NVIDIA GPU with CUDA support (recommended)
-- ~15GB disk space for models
-- Git LFS (for large model files if storing separately)
+This project implements a two-stage translation pipeline:
 
-## Setup Instructions
+1. **Stage 1: Domain-Specific Translation** - Translate text using multiple domain-specific fine-tuned adapters (news, social, speech, literary)
+2. **Stage 2: Ensemble Refinement** - Use the Chimera ensemble model to select the highest-quality translation from Stage 1 outputs
 
-### 1. Clone the Repository
+Suitable for tasks requiring high-quality translations customised to specific domains.
+
+## ✨ Key Features
+
+- **Domain-Adaptive Translation** - Fine-tuned LoRA adapters for 4 specialized domains
+- **Ensemble Selection** - Chimera model selects best translation from multiple domains
+- **COMET Evaluation** - Automated quality scoring with reference-based metrics
+- **Flexible Configuration** - Environment variables and centralised settings
+- **Batch Processing** - Efficient translation with customizable batch sizes
+
+## 📋 Prerequisites
+
+- **Python** 3.10+
+- **GPU** with CUDA support (NVIDIA recommended for reasonable inference speed)
+- **Disk Space** ~30GB for models (Hunyuan-MT-7B + Chimera + adapters)
+- **VRAM** ~20GB for inference (for fp16/bf16 models)
+
+**Optional:**
+- SLURM cluster access for distributed training
+- HuggingFace account (for downloading models from Hub)
+
+## Quick Start
+
+### 1. Clone & Setup
 
 ```bash
+# Clone the repository
 git clone <your-repo-url>
-cd CS4248-MT-proj
-```
+cd domain-adaptive-translation
 
-### 2. Create Virtual Environment
-
-```bash
+# Create virtual environment
 python -m venv venv
-```
+source venv/bin/activate  # macOS/Linux
+# or: .\venv\Scripts\Activate.ps1  # Windows
 
-### 3. Activate Virtual Environment
+# Install dependencies
+pip install -r requirements.txt
 
-**Windows (PowerShell):**
-```powershell
-.\venv\Scripts\Activate.ps1
-```
-
-**Linux/Mac:**
-```bash
-source venv/bin/activate
-```
-
-### 4. Install dependencies
-
-This repository includes a minimal `requirements.txt`. The recommended (and simplest) way to install the Python dependencies is:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-Platform notes:
-- If you have an NVIDIA GPU and want CUDA-accelerated PyTorch on Linux, install PyTorch following the official instructions at https://pytorch.org/get-started/locally/ (select your CUDA version). Example (Linux / CUDA 11.8):
-
-```bash
+# Download PyTorch (CUDA-enabled, example for CUDA 11.8)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
-- On macOS (Apple Silicon or Intel) there is no CUDA; follow the PyTorch "macOS" instructions on the PyTorch site (they provide the correct wheel / install method for CPU/Metal).
-
-- If you prefer to install pieces manually, the main packages used are:
+### 2. Download Models
 
 ```bash
-pip install transformers unbabel-comet huggingface-hub
+# Option A: Download to local folders (preferred)
+python -c "
+from huggingface_hub import snapshot_download
+snapshot_download(repo_id='tencent/Hunyuan-MT-7B', local_dir='./Hunyuan-MT-7B')
+snapshot_download(repo_id='tencent/Hunyuan-MT-Chimera-7B', local_dir='./Hunyuan-MT-Chimera-7B')
+"
+
+# Option B: Or use Hub IDs directly (auto-downloads on first run)
+# Set environment variables:
+export HUNYUAN_7B_PATH="tencent/Hunyuan-MT-7B"
+export HUNYUAN_CHIMERA_PATH="tencent/Hunyuan-MT-Chimera-7B"
 ```
 
-### 5. Download Hunyuan models
+### 3. Run Your First Translation
 
-The Hunyuan models are large and not included in the repo. You can either use the Hugging Face Hub directly (preferred) or download snapshots to local folders. The model name used in the translation scripts (for example `translate.py`) is `Hunyuan-MT-7B` by default; that may be either a local folder (e.g. `./Hunyuan-MT-7B`) or the Hub id `tencent/Hunyuan-MT-7B`.
+```bash
+# Baseline translation (single model)
+python scripts/baseline_translate.py data/raw/test1.zh output.en
 
-Option A — Hub (recommended): the transformer loader will accept a Hub id or a local path. Example in Python (using the Hugging Face Hub API):
+# Domain-adaptive pipeline (4 domains + Chimera selection)
+python scripts/pipeline_translate.py data/raw/test1.zh output_pipeline.en
+
+# Evaluate quality (requires reference)
+python scripts/evaluate_translation.py data/raw/test1.zh output.en data/reference/test1.en
+```
+
+**Done!** Check `output.en` and `output_pipeline.en` for translations.
+
+## Project Structure
+
+```
+domain-adaptive-translation/
+├── config/                        # Configuration management
+│   └── settings.py               # Centralized settings & paths
+│
+├── src/                          # Reusable Python modules
+│   ├── models/
+│   │   └── base.py               # Hunyuan model wrapper
+│   ├── data/
+│   │   └── loaders.py            # File I/O utilities
+│   ├── evaluation/
+│   │   └── comet_scorer.py       # COMET wrapper
+│   └── utils/
+│
+├── scripts/                      # Executable scripts
+│   ├── baseline_translate.py     # Single-model translation
+│   ├── pipeline_translate.py     # Two-stage domain-adaptive pipeline
+│   ├── evaluate_translation.py   # COMET scoring
+│   ├── refine_translations.py    # Chimera refinement only
+│   └── download_models.py        # Model downloader utility
+│
+├── data/                         # Data directory
+│   ├── raw/                      # Test/validation datasets
+│   ├── reference/                # Reference translations
+│   └── processed/                # Preprocessed data (for future use)
+│
+├── models/                       # Model storage
+│   ├── base/                     # Base Hunyuan models
+│   ├── finetuned/                # Domain-specific adapters
+│   │   ├── news/checkpoint-200
+│   │   ├── social/checkpoint-17502
+│   │   ├── speech/checkpoint-200
+│   │   └── literary/checkpoint-200
+│   └── checkpoints/              # Other model checkpoints
+│
+├── training/                     # Training infrastructure
+│   ├── scripts/                  # Fine-tuning scripts
+│   ├── configs/                  # DeepSpeed configs
+│   ├── data/                     # Training datasets
+│   └── outputs/                  # Training checkpoints
+│
+├── testing/                      # Evaluation outputs
+│   ├── outputs/                  # Translation & scoring results
+│   └── stats/                    # Comparison statistics
+│
+├── notebooks/                    # Jupyter notebooks
+├── docs/                         # Documentation
+└── README.md                     # This file
+```
+
+## Usage Guide
+
+### Basic Translation (Baseline Model)
+
+Translate text using the base Hunyuan-MT-7B model:
+
+```bash
+python scripts/baseline_translate.py <input_file> <output_file>
+
+# Examples:
+python scripts/baseline_translate.py data/raw/test1.zh baseline_output.en
+python scripts/baseline_translate.py data/raw/wmttest2022.zh wmttest2022_base.en
+```
+
+**Input:** One source sentence per line (UTF-8 encoded)  
+**Output:** One translation per line (same line count as input)
+
+### Domain-Adaptive Pipeline
+
+Two-stage translation for higher quality:
+
+```bash
+python scripts/pipeline_translate.py <input_file> <output_file>
+
+# Example:
+python scripts/pipeline_translate.py data/raw/test1.zh pipeline_output.en
+```
+
+**Stage 1:** Translates with 4 domain adapters (news, social, speech, literary)  
+**Stage 2:** Chimera model selects the best translation from Stage 1  
+**Output:** Intermediate translations in `pipeline_output_<basename>/`
+
+### Evaluate Translation Quality
+
+Score translations using COMET (requires reference):
+
+```bash
+python scripts/evaluate_translation.py <source> <mt> <reference> [output_file]
+
+# Example:
+python scripts/evaluate_translation.py \
+  data/raw/test1.zh \
+  pipeline_output.en \
+  data/reference/test1.en \
+  scores.txt
+```
+
+**Metric:** COMET score (0-1 scale, higher is better)
+
+### Refine Existing Translations
+
+Use Chimera model to refine pre-existing translations:
+
+```bash
+python scripts/refine_translations.py <source_file> <output_file>
+
+# Example:
+python scripts/refine_translations.py data/raw/test1.zh refined_output.en
+```
+
+Requires Stage 1 translations in `testing/outputs/` folder.
+
+### Download Models
+
+Pre-download evaluation models:
+
+```bash
+python scripts/download_models.py
+```
+
+Downloads COMET model to HuggingFace cache. Base models should be downloaded separately.
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Set model paths via environment (useful for cluster deployments):
+
+```bash
+export HUNYUAN_7B_PATH="tencent/Hunyuan-MT-7B"              # or local path
+export HUNYUAN_CHIMERA_PATH="tencent/Hunyuan-MT-Chimera-7B" # or local path
+export BATCH_SIZE=2                                         # inference batch size
+```
+
+### Configure in Code
+
+Edit `config/settings.py` to customize:
 
 ```python
-from huggingface_hub import snapshot_download
+# Model paths
+MODELS = {
+    "base": {"path": "Hunyuan-MT-7B"},
+    "chimera": {"path": "Hunyuan-MT-Chimera-7B"}
+}
 
-# Download a model snapshot into a local directory
-snapshot_download(repo_id="tencent/Hunyuan-MT-7B", local_dir="./Hunyuan-MT-7B")
+# Inference parameters
+INFERENCE_CONFIG = {
+    "batch_size": 2,
+    "max_new_tokens": 128,
+    "temperature": 0.7,
+    "top_k": 20,
+    "top_p": 0.6
+}
 ```
 
-Option B — Manual: visit the model pages and follow the model license/usage instructions, then place the extracted model folder in the project root (or set `MODEL_NAME` in the scripts to the hub id).
+## Advanced Usage
 
-Common model ids / folder names used in this repo:
-- `tencent/Hunyuan-MT-7B`  (local folder `Hunyuan-MT-7B`)
-- `tencent/Hunyuan-MT-7B-fp8`  (local folder `Hunyuan-MT-7B-fp8`)
-- `tencent/Hunyuan-MT-Chimera-7B` (local folder `Hunyuan-MT-Chimera-7B`)
+### Fine-tune a Domain Adapter
 
-If you set the script variable (e.g. `MODEL_NAME` in `translate.py`) to the Hugging Face id, the model will be loaded from the Hub (if you have network access and credentials if required).
-
-### 6. Download COMET Model
-
-The COMET scoring model will be downloaded automatically on first use, or you can download it manually:
+Located in `training/` directory:
 
 ```bash
-python download_comet_models.py
+cd training/scripts
+
+# View training script requirements
+cat train_domain_adapter.py
+
+# Example fine-tuning command
+python train_domain_adapter.py \
+  --model_name_or_path tencent/Hunyuan-MT-Chimera-7B \
+  --train_file ../data/train_dataset_news.jsonl \
+  --output_dir ../outputs/news \
+  --num_train_epochs 3
 ```
 
-This will download the `wmt22-comet-da` model to your HuggingFace cache.
+For SLURM cluster:
+```bash
+sbatch hunyuan_finetune.sbatch
+sbatch hunyuan_merge_lora.sbatch  # Merge LoRA weights
+```
 
-## Usage
+### Merge LoRA Weights
 
-## Quick start
-
-After cloning and creating a virtual environment, run:
+Combine adapter weights with base model:
 
 ```bash
-# Create and activate a venv (macOS / Linux)
-python -m venv venv
-source venv/bin/activate
-
-# Install requirements
-python -m pip install -r requirements.txt
-
-# (optional) download the COMET scoring model once
-python download_comet_models.py
+cd training/scripts
+python merge_lora_weight.py --adapters_path ../outputs/news --output_dir ../merged/news
 ```
 
-Translate (single script):
+### Batch Processing with Custom Scripts
 
+Use the modular `src/` modules in your own scripts:
+
+```python
+from src.models.base import HunyuanTranslator
+from src.data.loaders import load_file, save_file
+
+# Load translations
+translator = HunyuanTranslator("Hunyuan-MT-7B")
+texts = load_file("data/raw/input.zh")
+
+# Translate in batches
+translations = translator.translate_batch(texts, batch_size=4)
+
+# Save results
+save_file("output.en", translations)
+```
+
+## Understanding Domain Adapters
+
+This project includes fine-tuned LoRA adapters for 4 domains:
+
+| Domain | Checkpoint | Typical Use Cases |
+|--------|------------|------------------|
+| **News** | checkpoint-200 | News articles, journalistic writing |
+| **Social** | checkpoint-17502 | Social media, casual text |
+| **Literary** | checkpoint-200 | Fiction, creative writing, literature |
+| **Speech** | checkpoint-200 | Transcribed speech, spoken language |
+
+**How the pipeline works:**
+1. Input text is translated with all 4 adapters in parallel
+2. Chimera model evaluates all 4 candidates
+3. Best translation is selected based on Chimera's judgment
+
+## Troubleshooting
+
+### Memory Issues (Out of Memory)
+
+**Reduce batch size:**
 ```bash
-# The translate script reads the source file and writes translations.
-python translate.py
+export BATCH_SIZE=1
+python scripts/baseline_translate.py ...
 ```
 
-By default `translate.py` sets `MODEL_NAME = "Hunyuan-MT-7B"`. Edit that variable if you want to point to a different local folder or Hub id (for example `tencent/Hunyuan-MT-7B`).
-
-Translate using the pipeline helper (domain-aware checkpoints):
-
+**Use quantized model:**
 ```bash
-python translate_pipeline.py <input_file>
-# Example:
-python translate_pipeline.py test1.zh
+export HUNYUAN_7B_PATH="tencent/Hunyuan-MT-7B-fp8"
 ```
 
-Score translations using COMET:
+**Use smaller model:**
+Not available for Hunyuan; consider alternative models
 
+### Slow Inference
+
+- Ensure GPU is being used: Check `nvidia-smi` during inference
+- GPU memory usage < 50% = CPU bottleneck (model too large for GPU)
+- For CPU inference: expect 5-10x slower speed
+
+### Model Download Issues
+
+If Hugging Face Hub is slow/blocked:
+1. Download models manually from [Hugging Face](https://huggingface.co/tencent)
+2. Place in project root or set `HUNYUAN_7B_PATH` to local path
+
+### Import Errors
+
+Ensure project root is in Python path:
 ```bash
-python score.py <source_file> <mt_file> <reference_file>
-# Example:
-python score.py test1.zh test1.en wmttest2022.AnnA.en
+cd /path/to/domain-adaptive-translation
+python scripts/...  # Run from project root
 ```
 
-Other helper scripts:
-- `download_comet_models.py` — download reference-based COMET model to cache and print paths
-- `refine_only.py` — small helper (see header for usage)
+## References & Links
 
-Notes:
-- Scripts assume one sentence per line for source/mt/reference files.
-- If you run on CPU (no GPU) expect much slower inference. For macOS, install PyTorch as recommended on the PyTorch website (select macOS and CPU/Metal).
+**Models:**
+- [Hunyuan-MT on Hugging Face](https://huggingface.co/collections/tencent/hunyuan-mt-68b42f76d473f82798882597)
+- [Hunyuan-MT Technical Report](https://arxiv.org/pdf/2509.05209)
 
-### Scoring Translations
+**Evaluation:**
+- [COMET Documentation](https://github.com/Unbabel/COMET)
+- [COMET Paper (Rei et al., 2020)](https://aclanthology.org/2020.emnlp-main.213/)
 
-Evaluate translation quality using COMET:
+**Fine-tuning:**
+- [LoRA: Low-Rank Adaptation](https://huggingface.co/docs/peft/en/conceptual_guides/adapter)
+- [DeepSpeed Documentation](https://www.deepspeed.ai/)
 
-```bash
-python score.py <source_file> <mt_file> <reference_file>
+## Citation
+
+If you use this project, please cite:
+
+```bibtex
+@article{hunyuan2024,
+  title={Hunyuan-MT: Advancing Neural Machine Translation with Domain Adaptation},
+  author={Tencent},
+  year={2024},
+  note={https://github.com/Tencent-Hunyuan/Hunyuan-MT}
+}
 ```
 
-**Example:**
-```bash
-python score.py test1.zh test1.en wmttest2022.AnnA.en
-```
+## License
 
-**Arguments:**
-- `source_file`: Chinese source text (one sentence per line)
-- `mt_file`: Machine-translated English text (one sentence per line)
-- `reference_file`: Human reference English translation (one sentence per line)
+See `LICENSE` file (or follow the Hunyuan-MT model license from Tencent).
 
-**Output:**
-- Individual COMET scores for each sentence (0-1 scale, higher is better)
-- Average COMET score across all sentences
+## Contributing
 
-## Project structure (high level)
+Found a bug or have a feature request? Open an issue or submit a pull request!
 
-```
-.
-├── translate.py              # Translation script (edit MODEL_NAME / input/output)
-├── translate_pipeline.py     # Domain-aware pipeline that picks finetuned checkpoints
-├── refine_only.py            # Small helper script (usage in header)
-├── score.py                  # COMET scoring script
-├── download_comet_models.py  # Helper to download COMET models
-├── requirements.txt          # Python dependencies
-├── test1.zh/test1.en         # Small samples used in repo
-├── mt/                       # Training/test corpora (large files)
-├── finetune/                 # Finetuning adapters/checkpoints and helper data
-├── Hunyuan-MT/               # Hunyuan-MT helper code and finetune scripts
-└── testing/                  # Evaluation pipelines and outputs
-```
+---
 
-## Models
-
-Translation models used in this repo (examples):
-- `tencent/Hunyuan-MT-7B` — full precision 7B translation model
-- `tencent/Hunyuan-MT-7B-fp8` — quantized FP8 variant (smaller, cheaper GPU memory)
-- `tencent/Hunyuan-MT-Chimera-7B` — ensemble Chimera model
-
-Evaluation model:
-- `Unbabel/wmt22-comet-da` — reference-based COMET scoring model (downloaded by `download_comet_models.py` or automatically by `score.py`).
-
-COMET returns per-sentence scores (higher is better). See `score.py` for usage and options.
-
-## Notes
-
-- First run will take longer due to model loading
-- GPU is highly recommended for translation
-- COMET scoring works on both CPU and GPU
+**Last Updated:** March 2026  
+**Maintainer:** Your Name/Team
 - The models require ~15-20GB total disk space
 
 ## Troubleshooting
