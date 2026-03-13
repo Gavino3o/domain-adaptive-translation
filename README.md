@@ -11,7 +11,7 @@ This project implements a two-stage translation pipeline:
 
 Suitable for tasks requiring high-quality translations customised to specific domains.
 
-## ✨ Key Features
+## Key Features
 
 - **Domain-Adaptive Translation** - Fine-tuned LoRA adapters for 4 specialized domains
 - **Ensemble Selection** - Chimera model selects best translation from multiple domains
@@ -19,7 +19,7 @@ Suitable for tasks requiring high-quality translations customised to specific do
 - **Flexible Configuration** - Environment variables and centralised settings
 - **Batch Processing** - Efficient translation with customizable batch sizes
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Python** 3.10+
 - **GPU** with CUDA support (NVIDIA recommended for reasonable inference speed)
